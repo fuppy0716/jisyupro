@@ -8,6 +8,9 @@ SRC_FILES = ./*.cpp
 
 EXE_NAME = test
 
+CXXFLAGS = `pkg-config opencv --cflags`
+LDFLAGS = `pkg-config opencv --libs`
+
 ifeq ("$(OSTYPE)","Darwin")
 	LDFLAGS += -framework OpenGL -framework GLUT
 else
@@ -15,5 +18,4 @@ else
 endif
 
 USED_LIBS += OpenNI
-
 include ../build/common/CommonCppMakefile
