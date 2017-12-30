@@ -1,0 +1,4 @@
+class Color
+{
+  static int blue[3] = {255, 0, 0};
+};

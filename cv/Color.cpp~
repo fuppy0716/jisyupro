@@ -1,0 +1,3 @@
+#include "Color.hpp"
+
+const int Color::blue[] = {255, 0, 0};

@@ -1,0 +1,45 @@
+#include <pthread.h>
+#include <unistd.h>
+#include <opencv/cv.h>
+#include <opencv/cvaux.h>
+#include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
+#include <iostream>
+#include <vector>
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <omp.h>
+#include "Color.cpp"
+using namespace std;
+using namespace cv;
+
+Mat src;
+Mat mini;
+
+int main(int argc, char** argv) {
+  if(argc>=2){
+    src=imread(argv[1],1);
+  }else{
+    cout<<"画像を指定してください"<<endl;
+  }
+  // namedWindow("src", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
+  // imshow("src", src);
+  // cvWaitKey();
+  // destroyWindow("src");
+  const int blockNum = 64;
+  int rows = src.rows;
+  int cols = src.cols;
+  cout << rows << " " << cols << endl;
+  int rowblock1 = rows / blockNum, rowblock2 = rows - rows % blockNum;
+  int colblock1 = cols / blockNum, colblock2 = cols - cols % blockNum;
+  Mat mini(blockNum, blockNum, CV_8UC3);
+  vector<vector<vector<int> > > color(blockNum, vector<vector<int> >(blockNum, vector<int>(3, 0)));
+  
+  for (int i = 0; 
+  // namedWindow("mini", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
+  // imshow("mini", mini);
+  // cvWaitKey();
+      
+}

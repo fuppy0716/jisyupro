@@ -1,0 +1,19 @@
+all: puzzle draw circle girl mini simpleMove
+
+puzzle: puzzle.cpp
+	g++ -o puzzle puzzle.cpp `pkg-config opencv --cflags` `pkg-config opencv --libs` -fopenmp -std=c++14
+
+draw: draw.cpp
+	g++ -o draw draw.cpp `pkg-config opencv --cflags` `pkg-config opencv --libs` -fopenmp -std=c++14
+
+circle: circle.cpp
+	g++ -o circle circle.cpp `pkg-config opencv --cflags` `pkg-config opencv --libs` -fopenmp -std=c++14
+
+girl: girl.cpp
+	g++ -o girl girl.cpp `pkg-config opencv --cflags` `pkg-config opencv --libs` -fopenmp -std=c++14
+
+mini: mini.cpp
+	g++ -o mini mini.cpp `pkg-config opencv --cflags` `pkg-config opencv --libs` -fopenmp -std=c++14
+
+simpleMove: simpleMove.cpp
+	g++ -o simpleMove simpleMove.cpp `pkg-config opencv --cflags` `pkg-config opencv --libs` -fopenmp -std=c++14

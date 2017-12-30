@@ -1,0 +1,46 @@
+#include <pthread.h>
+#include <unistd.h>
+#include <opencv/cv.h>
+#include <opencv/cvaux.h>
+#include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
+#include <iostream>
+#include <vector>
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <omp.h>
+#include "Color.cpp"
+using namespace std;
+using namespace cv;
+
+
+void PinP_tr(const Mat &back, const Mat src, const int tx, const int ty) {
+  Mat dstImg;
+  back.copyTo(dstImg);
+
+  Mat mat = (Mat_<double>(2, 3)<<1.0, 0.0, tx, 0.0, 1.0, ty);
+
+  warpAffine(src, dstImg, mat, dstImg.size(), CV_INTER_LINEAR, BORDER_TRANSPARENT);
+  imshow("affine", dstImg);
+}
+  
+
+int main(int argc, char** argv) {
+  Mat back, src;
+  if (argc <= 2) {
+    cout << "画像!!" << endl;
+    return 0;
+  }
+  back = imread(argv[1], 1);
+  src = imread(argv[2], 1);
+
+  for (int i = 0; i < 10; i++) {
+    PinP_tr(back, src, 10, 10);
+    cvWaitKey(500);
+    PinP_tr(back, src, 10, 13);
+    cvWaitKey(500);
+  }
+}
+  
