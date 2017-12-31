@@ -1,4 +1,7 @@
+using namespace std;
+#include <vector>
 #include <math.h>
+#include <iostream>
 
 #include "SceneDrawer.h"
 
@@ -7,6 +10,12 @@
 #else
     #include <GL/glut.h>
 #endif
+
+#include <opencv/cv.h>
+#include <opencv/cvaux.h>
+#include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
+using namespace cv;
 
 
 extern xn::UserGenerator g_UserGenerator;
@@ -24,8 +33,9 @@ extern XnBool g_bMarkJoints;
 #include <map>
 std::map<XnUInt32, std::pair<XnCalibrationStatus, XnPoseDetectionStatus> > m_Errors;
 
+//í«â¡ÉvÉçÉgÉ^ÉCÉvêÈåæ
 void DrawPerson(XnUserID player);
-
+void DrawPoint(XnUserID player);
 
 void XN_CALLBACK_TYPE MyCalibrationInProgress(xn::SkeletonCapability& /*capability*/, XnUserID id, XnCalibrationStatus calibrationError, void* /*pCookie*/)
 {
@@ -184,7 +194,7 @@ void DrawJoint(XnUserID player, XnSkeletonJoint eJoint)
     drawCircle(pt.X, pt.Y, 2);
 }
 
-void DrawTeapot(XnUserID player, XnSkeletonJoint eJoint)
+void DrawTeapot(XnUserID player, XnSkeletonJoint eJoint, Mat img)
 {
     if (!g_UserGenerator.GetSkeletonCap().IsTracking(player)) {
         printf("not tracked!\n");
@@ -266,7 +276,7 @@ const XnChar* GetPoseErrorString(XnPoseDetectionStatus error)
     }
 }
 
-void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
+void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, Mat img)
 {
     static bool bInitialized = false;
     static GLuint depthTexID;
@@ -461,12 +471,10 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
                 DrawJoint(aUsers[i], XN_SKEL_RIGHT_FOOT);
             }
 
-            //â€ëË5-3
-            //Draw...
-	    //DrawTeapot(aUsers[i], XN_SKEL_HEAD);
+            //DrawTeapot(aUsers[i], XN_SKEL_HEAD, img);
 	    DrawPerson(aUsers[i]);
-
-            glBegin(GL_LINES);
+	    //DrawPoint(aUsers[i]);
+	    glBegin(GL_LINES);
 
             // Draw Limbs
             DrawLimb(aUsers[i], XN_SKEL_HEAD, XN_SKEL_NECK);
@@ -508,37 +516,167 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd)
     }
 }
 
-void DrawPerson(XnUserID player)
-{
+
+
+void DrawPoint(XnUserID player) {
     if (!g_UserGenerator.GetSkeletonCap().IsTracking(player)) {
         printf("not tracked!\n");
         return;
     }
-    if (!g_UserGenerator.GetSkeletonCap().IsJointActive(XN_SKEL_RIGHT_SHOULDER)) {
-        return;
-    }
-    
-    XnSkeletonJointPosition joint = (XnSkeletonJointPosition)(-1); 
-    g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, XN_SKEL_RIGHT_SHOULDER, joint);
-    if (joint.fConfidence < 0.5) {
-        return;
+
+    XnSkeletonJoint Points[25];
+    for (int i = 0; i < 25; i++) {
+      Points[i] = (XnSkeletonJoint)i;
     }
 
-    XnPoint3D pt;
-    pt = joint.position;
+    for (int i = 0; i < 25; i++) {
+      if (!g_UserGenerator.GetSkeletonCap().IsJointActive(Points[i])) {
+        continue;
+      }
+      XnSkeletonJointPosition Joint;
+      g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, Points[i], Joint);
+      if (Joint.fConfidence < 0.5) {
+	continue;
+      }
+      XnPoint3D Pt;
+      Pt = Joint.position;
+      g_DepthGenerator.ConvertRealWorldToProjective(1, &Pt, &Pt);
+      glPushMatrix();
+      {
+        glColor4d(1.0, 1.0, 1.0, 1.0);
+	glTranslated(Pt.X, Pt.Y, 0);
+	glRotated(180.0, 1.0, 0.0, 0.0);
+	glutSolidCube(10);
+      }
+      glPopMatrix();
+    }
+}
 
-    g_DepthGenerator.ConvertRealWorldToProjective(1, &pt, &pt);
 
+void DrawPerson(XnUserID player)
+{
+  if (!g_UserGenerator.GetSkeletonCap().IsTracking(player)) {
+    printf("not tracked!\n");
+    return;
+  }
+
+  // ì™
+  if (!g_UserGenerator.GetSkeletonCap().IsJointActive(XN_SKEL_HEAD)) {
+    return;
+  }
+  XnSkeletonJointPosition headJoint;
+  g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, XN_SKEL_HEAD, headJoint);
+  if (headJoint.fConfidence < 0.5) {
+    return;
+  }
+  XnPoint3D headPt;
+  headPt = headJoint.position;
+  g_DepthGenerator.ConvertRealWorldToProjective(1, &headPt, &headPt);
+  glPushMatrix();
+  {
+    glColor4d(1.0, 1.0, 1.0, 1.0);
+    glTranslated(headPt.X, headPt.Y, 0);
+    glRotated(180.0, 1.0, 0.0, 0.0);
+    glutSolidCube(100);
+  }
+  glPopMatrix();
+
+  // ì∑ëÃ
+  XnSkeletonJoint bodyParts[4] = {XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_HIP, XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_SHOULDER};
+  XnSkeletonJointPosition bodyJoint[4];
+  XnPoint3D bodyPt[4];
+  for (int i = 0; i < 4; i++) {
+      
+    if (!g_UserGenerator.GetSkeletonCap().IsJointActive(bodyParts[i])) {
+      cout << "not Active" << endl;
+      return;
+    }
+    g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, bodyParts[i], bodyJoint[i]);
+    if (bodyJoint[i].fConfidence < 0.5) {
+      return;
+    }
+    bodyPt[i] = bodyJoint[i].position;
+    g_DepthGenerator.ConvertRealWorldToProjective(1, &bodyPt[i], &bodyPt[i]);
+  }
+
+  for (int i = 0; i < 4; i++) {
     glPushMatrix();
     {
-        glColor4d(1.0, 0.0, 0.0, 1.0);
-	//â€ëË5-3
-	glTranslated(pt.X, pt.Y, 0);
-	printf("%lf %lf %lf\n", pt.X, pt.Y, pt.Z);
-	//glTranslated(); //ìKêÿÇ»à íuÇ…à⁄ìÆÇ∑ÇÈ
-        glRotated(180.0, 1.0, 0.0, 0.0); //ç¿ïWånÇ…çáÇÌÇπÇƒè„â∫ÇâÒì]Ç∑ÇÈ
-	glutSolidCube(10);
-	//Ç±Ç±Ç≈TeapotÇï`âÊ
+      glColor4d(0.0, 0.0, 1.0, 1.0);
+      glTranslated(bodyPt[i].X, bodyPt[i].Y, 0);
+      glRotated(180.0, 1.0, 0.0, 0.0); //ç¿ïWånÇ…çáÇÌÇπÇƒè„â∫ÇâÒì]Ç∑ÇÈ
+      glutSolidCube(20);
     }
     glPopMatrix();
+
+  }
+    
+  glPushMatrix();
+  {
+    glColor4d(1.0, 1.0, 0.0, 1.0);
+    int midX = 0, midY = 0;
+    for (int i = 0; i < 4; i++) {
+      midX += bodyPt[i].X;
+      midY += bodyPt[i].Y;
+    }
+    glTranslated(midX / 4, midY / 4, 0);
+    double height, width;
+    height = (bodyPt[0].Y + bodyPt[3].Y - bodyPt[1].Y - bodyPt[2].Y) / 2;
+    width = (bodyPt[0].X + bodyPt[1].X - bodyPt[2].X - bodyPt[3].X) / 2;
+    glScalef(1, height/width, 1);
+    glutSolidCube(width);
+  }
+  glPopMatrix();
+  
+  vector<vector<XnSkeletonJoint> > arm(2, vector<XnSkeletonJoint>());
+  arm[0] = {XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_WRIST};
+  arm[1] = {XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_WRIST};
+
+  for (int i = 0; i < 2; i++) {
+    vector<XnSkeletonJointPosition> armJoint(3);
+    vector<XnPoint3D> armPt(3);
+    for (int j = 0; j < 3; j++) {
+      if (!g_UserGenerator.GetSkeletonCap().IsJointActive(arm[i][j])) {
+	return;
+      }
+      g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, arm[i][j], armJoint[j]);
+      if (armJoint[j].fConfidence < 0.5) {
+	continue;
+      }
+      armPt[j] = armJoint[j].position;
+      g_DepthGenerator.ConvertRealWorldToProjective(1, &armPt[j], &armPt[j]);
+    }
+
+    vector<double> theta(2), dist(2);
+    for (int j = 0; j < 2; j++) {
+      theta[j] = atan2(armPt[j + 1].Y - armPt[j].Y, armPt[j + 1].X - armPt[j].X);
+      theta[j] *= (180 / M_PI);
+      dist[j] = sqrt(pow(armPt[j + 1].Y - armPt[j].Y, 2) + pow(armPt[j + 1].X - armPt[j].X, 2));
+    }
+    
+    glPushMatrix();
+    {
+      glColor4d(1.0, 1.0, 1.0, 1.0);
+      glTranslated(armPt[0].X, armPt[0].Y, 0);
+      for (int j = 0; j < 2; j++) {
+	glPushMatrix();
+	{
+	  glRotated(theta[j], 0, 0, 1);
+	  glTranslated(dist[j]/2, 0, 0);
+	  glPushMatrix();
+	  {
+	    glScalef(dist[j] / 10, 1, 1);
+	    glutSolidCube(10);
+	  }
+	  glPopMatrix();
+	  glTranslated(dist[j]/2, 0, 0);
+	}
+      }
+      for (int j = 0; j < 2; j++) {
+	glPopMatrix();
+      }
+    }
+    glPopMatrix();
+
+  }
 }

@@ -1,3 +1,6 @@
+using namespace std;
+#include <iostream>
+
 #include <XnOpenNI.h>
 #include <XnCodecIDs.h>
 #include <XnCppWrapper.h>
@@ -5,6 +8,11 @@
 
 #include "SceneDrawer.h"
 
+#include <opencv/cv.h>
+#include <opencv/cvaux.h>
+#include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
+cv::Mat src;
 
 #if (XN_PLATFORM == XN_PLATFORM_MACOSX)
     #include <GLUT/glut.h>
@@ -22,6 +30,7 @@
 
 #define GL_WIN_SIZE_X 720
 #define GL_WIN_SIZE_Y 480
+
 
 
 xn::Context g_Context;
@@ -190,8 +199,8 @@ void glutDisplay (void)
     // Process the data
     g_DepthGenerator.GetMetaData(depthMD);
     g_UserGenerator.GetUserPixels(0, sceneMD);
-    DrawDepthMap(depthMD, sceneMD);
-
+    DrawDepthMap(depthMD, sceneMD, src);
+    
     glutSwapBuffers();
 }
 
@@ -241,6 +250,13 @@ void glutKeyboard (unsigned char key, int /*x*/, int /*y*/)
     case 'L':
         LoadCalibration();
         break;
+    case 'a':
+      cout << "aaa" << endl;
+      cv::Mat cvimg = cv::Mat::zeros(GL_WIN_SIZE_Y, GL_WIN_SIZE_X, CV_8UC3);
+      glReadPixels(0, 0, GL_WIN_SIZE_X, GL_WIN_SIZE_Y, GL_BGR_EXT, GL_UNSIGNED_BYTE, cvimg.data);
+      cv::flip(cvimg, cvimg, 0);
+      cv::imwrite("aaa.png", cvimg);
+      break;
     }
 }
 
@@ -263,32 +279,23 @@ void glInit (int * pargc, char ** argv)
     glDisableClientState(GL_COLOR_ARRAY);
 }
 
+
 int main(int argc, char **argv)
 {
-    XnStatus nRetVal = XN_STATUS_OK;
+  XnStatus nRetVal = XN_STATUS_OK;
 
-    if (argc > 1) {
-        nRetVal = g_Context.Init();
-        CHECK_RC(nRetVal, "Init");
-        nRetVal = g_Context.OpenFileRecording(argv[1], g_Player);
-        if (nRetVal != XN_STATUS_OK) {
-            printf("Can't open recording %s: %s\n", argv[1], xnGetStatusString(nRetVal));
-            return 1;
-        }
-    } else {
-        xn::EnumerationErrors errors;
-        nRetVal = g_Context.InitFromXmlFile(SAMPLE_XML_PATH, g_scriptNode, &errors);
-        if (nRetVal == XN_STATUS_NO_NODE_PRESENT) {
-            XnChar strError[1024];
-            errors.ToString(strError, 1024);
-            printf("%s\n", strError);
-            return (nRetVal);
-        } else if (nRetVal != XN_STATUS_OK) {
-            printf("Open failed: %s\n", xnGetStatusString(nRetVal));
-            return (nRetVal);
-        }
-    }
-
+  xn::EnumerationErrors errors;
+  nRetVal = g_Context.InitFromXmlFile(SAMPLE_XML_PATH, g_scriptNode, &errors);
+  if (nRetVal == XN_STATUS_NO_NODE_PRESENT) {
+    XnChar strError[1024];
+    errors.ToString(strError, 1024);
+    printf("%s\n", strError);
+    return (nRetVal);
+  } else if (nRetVal != XN_STATUS_OK) {
+    printf("Open failed: %s\n", xnGetStatusString(nRetVal));
+    return (nRetVal);
+  }
+  
     nRetVal = g_Context.FindExistingNode(XN_NODE_TYPE_IMAGE, g_ImageGenerator);
     if (nRetVal != XN_STATUS_OK) {
         printf("No image node exists! Check your XML.");
