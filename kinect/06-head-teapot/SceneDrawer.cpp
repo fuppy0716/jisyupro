@@ -627,16 +627,20 @@ void DrawPerson(XnUserID player)
     glutSolidCube(width);
   }
   glPopMatrix();
-  
-  vector<vector<XnSkeletonJoint> > arm(2, vector<XnSkeletonJoint>());
-  arm[0] = {XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_WRIST};
-  arm[1] = {XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_WRIST};
 
-  for (int i = 0; i < 2; i++) {
+  //˜r
+  vector<vector<XnSkeletonJoint> > arm(4, vector<XnSkeletonJoint>());
+  arm[0] = {XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_HAND};
+  arm[1] = {XN_SKEL_LEFT_SHOULDER, XN_SKEL_LEFT_ELBOW, XN_SKEL_LEFT_HAND};
+  arm[2] = {XN_SKEL_RIGHT_HIP, XN_SKEL_RIGHT_KNEE, XN_SKEL_RIGHT_FOOT};
+  arm[3] = {XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_KNEE, XN_SKEL_LEFT_FOOT};
+  
+  for (int i = 0; i < 4; i++) {
     vector<XnSkeletonJointPosition> armJoint(3);
     vector<XnPoint3D> armPt(3);
     for (int j = 0; j < 3; j++) {
       if (!g_UserGenerator.GetSkeletonCap().IsJointActive(arm[i][j])) {
+	cout << i << " " << j << endl;
 	return;
       }
       g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, arm[i][j], armJoint[j]);
@@ -647,11 +651,12 @@ void DrawPerson(XnUserID player)
       g_DepthGenerator.ConvertRealWorldToProjective(1, &armPt[j], &armPt[j]);
     }
 
-    vector<double> theta(2), dist(2);
+    vector<double> theta(3), dist(2);
     for (int j = 0; j < 2; j++) {
-      theta[j] = atan2(armPt[j + 1].Y - armPt[j].Y, armPt[j + 1].X - armPt[j].X);
-      theta[j] *= (180 / M_PI);
+      theta[j + 1] = atan2(armPt[j + 1].Y - armPt[j].Y, armPt[j + 1].X - armPt[j].X);
+      theta[j + 1] *= (180 / M_PI);
       dist[j] = sqrt(pow(armPt[j + 1].Y - armPt[j].Y, 2) + pow(armPt[j + 1].X - armPt[j].X, 2));
+      dist[j] /= 2;
     }
     
     glPushMatrix();
@@ -661,7 +666,7 @@ void DrawPerson(XnUserID player)
       for (int j = 0; j < 2; j++) {
 	glPushMatrix();
 	{
-	  glRotated(theta[j], 0, 0, 1);
+	  glRotated(theta[j + 1] - theta[j], 0, 0, 1);
 	  glTranslated(dist[j]/2, 0, 0);
 	  glPushMatrix();
 	  {
@@ -677,6 +682,7 @@ void DrawPerson(XnUserID player)
       }
     }
     glPopMatrix();
-
   }
+  
+  
 }
