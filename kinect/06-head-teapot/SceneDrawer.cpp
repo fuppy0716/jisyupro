@@ -26,6 +26,7 @@ extern XnBool g_bDrawPixels;
 extern XnBool g_bDrawSkeleton;
 extern XnBool g_bPrintID;
 extern XnBool g_bPrintState;
+extern XnBool g_bDrawTexture;
 
 extern XnBool g_bPrintFrameID;
 extern XnBool g_bMarkJoints;
@@ -36,6 +37,7 @@ std::map<XnUInt32, std::pair<XnCalibrationStatus, XnPoseDetectionStatus> > m_Err
 //í«â¡ÉvÉçÉgÉ^ÉCÉvêÈåæ
 void DrawPerson(XnUserID player);
 void DrawPoint(XnUserID player);
+void DrawFace(double x, double y, double radius);
 
 void XN_CALLBACK_TYPE MyCalibrationInProgress(xn::SkeletonCapability& /*capability*/, XnUserID id, XnCalibrationStatus calibrationError, void* /*pCookie*/)
 {
@@ -72,6 +74,7 @@ GLuint initTexture(void** buf, int& width, int& height)
 
 GLfloat texcoords[8];
 
+
 void DrawRectangle(float topLeftX, float topLeftY, float bottomRightX, float bottomRightY)
 {
     GLfloat verts[8] = {
@@ -84,6 +87,7 @@ void DrawRectangle(float topLeftX, float topLeftY, float bottomRightX, float bot
 
     glFlush();
 }
+
 
 void DrawTexture(float topLeftX, float topLeftY, float bottomRightX, float bottomRightY)
 {
@@ -110,6 +114,8 @@ XnFloat Colors[][3] =
     {1,1,1}
 };
 XnUInt32 nColors = 10;
+
+
 
 void glPrintString(void *font, char *str)
 {
@@ -168,6 +174,8 @@ void drawCircle(float x, float y, float radius)
    glEnd();
 }
 
+
+
 void DrawJoint(XnUserID player, XnSkeletonJoint eJoint)
 {
     if (!g_UserGenerator.GetSkeletonCap().IsTracking(player)) {
@@ -192,44 +200,6 @@ void DrawJoint(XnUserID player, XnSkeletonJoint eJoint)
     g_DepthGenerator.ConvertRealWorldToProjective(1, &pt, &pt);
 
     drawCircle(pt.X, pt.Y, 2);
-}
-
-void DrawTeapot(XnUserID player, XnSkeletonJoint eJoint, Mat img)
-{
-    if (!g_UserGenerator.GetSkeletonCap().IsTracking(player)) {
-        printf("not tracked!\n");
-        return;
-    }
-
-    if (!g_UserGenerator.GetSkeletonCap().IsJointActive(eJoint)) {
-        return;
-    }
-
-    XnSkeletonJointPosition joint;
-    g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, eJoint, joint);
-
-    if (joint.fConfidence < 0.5) {
-        return;
-    }
-
-    XnPoint3D pt;
-    pt = joint.position;
-
-    g_DepthGenerator.ConvertRealWorldToProjective(1, &pt, &pt);
-
-    glPushMatrix();
-    {
-        glColor4d(1.0, 0.0, 0.0, 1.0);
-	//â€ëË5-3
-	glTranslated(pt.X, pt.Y, 0);
-	printf("%lf %lf %lf\n", pt.X, pt.Y, pt.Z);
-	//glTranslated(); //ìKêÿÇ»à íuÇ…à⁄ìÆÇ∑ÇÈ
-        glRotated(180.0, 1.0, 0.0, 0.0); //ç¿ïWånÇ…çáÇÌÇπÇƒè„â∫ÇâÒì]Ç∑ÇÈ
-	glutSolidTeapot(50);
-
-	//Ç±Ç±Ç≈TeapotÇï`âÊ
-    }
-    glPopMatrix();
 }
 
 const XnChar* GetCalibrationErrorString(XnCalibrationStatus error)
@@ -289,7 +259,6 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, Ma
     float bottomRightX;
     float texXpos;
     float texYpos;
-
     if(!bInitialized) {
         texWidth =  getClosestPowerOfTwo(dmd.XRes());
         texHeight = getClosestPowerOfTwo(dmd.YRes());
@@ -352,6 +321,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, Ma
         }
     }
 
+    
     pDepth = dmd.Data();
     if (g_bDrawPixels) {
         XnUInt32 nIndex = 0;
@@ -393,15 +363,16 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, Ma
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, pDepthTexBuf);
 
     // Display the OpenGL texture map
-    glColor4f(0.75, 0.75, 0.75, 1);
+    if (g_bDrawTexture) {
+      glColor4f(0.75, 0.75, 0.75, 1);
 
-    glEnable(GL_TEXTURE_2D);
-    glPushMatrix();
-    glTranslated(0.0, 0.0, -100.0);
-    DrawTexture(dmd.XRes(), dmd.YRes(), 0, 0);
-    glPopMatrix();
-    glDisable(GL_TEXTURE_2D);
-
+      glEnable(GL_TEXTURE_2D);
+      glPushMatrix();
+      glTranslated(0.0, 0.0, -100.0);
+      DrawTexture(dmd.XRes(), dmd.YRes(), 0, 0);
+      glPopMatrix();
+      glDisable(GL_TEXTURE_2D);
+    }
     char strLabel[50] = "";
     XnUserID aUsers[15];
     XnUInt16 nUsers = 15;
@@ -434,6 +405,10 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, Ma
             glRasterPos2i(com.X, com.Y);
             glPrintString(GLUT_BITMAP_HELVETICA_18, strLabel);
         }
+	////////////////////////////////////
+	if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i])) {
+	  DrawPerson(aUsers[i]);
+	}
 
         if (g_bDrawSkeleton && g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i])) {
             glColor4f(1-Colors[aUsers[i]%nColors][0], 1-Colors[aUsers[i]%nColors][1], 1-Colors[aUsers[i]%nColors][2], 1);
@@ -472,7 +447,6 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, Ma
             }
 
             //DrawTeapot(aUsers[i], XN_SKEL_HEAD, img);
-	    DrawPerson(aUsers[i]);
 	    //DrawPoint(aUsers[i]);
 	    glBegin(GL_LINES);
 
@@ -516,7 +490,25 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, Ma
     }
 }
 
-
+void DrawFace(double x, double y, double radius) {
+  glPushMatrix();
+  {
+    glColor4d(1.0, 0.0, 0.0, 1.0);
+    glTranslated(x, y, -1);
+    drawCircle(0, 0, radius);
+    glPushMatrix();
+    {
+      glTranslated(0, -10, 1);
+      glScalef(1, 2, 1);
+      glColor4d(0, 0, 0, 1.0);
+      drawCircle(-15, 0, 7);
+      drawCircle(15, 0, 7);
+    }
+    glPopMatrix();
+  }
+  glPopMatrix();
+    
+}
 
 void DrawPoint(XnUserID player) {
     if (!g_UserGenerator.GetSkeletonCap().IsTracking(player)) {
@@ -560,74 +552,7 @@ void DrawPerson(XnUserID player)
     return;
   }
 
-  // ì™
-  if (!g_UserGenerator.GetSkeletonCap().IsJointActive(XN_SKEL_HEAD)) {
-    return;
-  }
-  XnSkeletonJointPosition headJoint;
-  g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, XN_SKEL_HEAD, headJoint);
-  if (headJoint.fConfidence < 0.5) {
-    return;
-  }
-  XnPoint3D headPt;
-  headPt = headJoint.position;
-  g_DepthGenerator.ConvertRealWorldToProjective(1, &headPt, &headPt);
-  glPushMatrix();
-  {
-    glColor4d(1.0, 1.0, 1.0, 1.0);
-    glTranslated(headPt.X, headPt.Y, 0);
-    glRotated(180.0, 1.0, 0.0, 0.0);
-    glutSolidCube(100);
-  }
-  glPopMatrix();
-
-  // ì∑ëÃ
-  XnSkeletonJoint bodyParts[4] = {XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_HIP, XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_SHOULDER};
-  XnSkeletonJointPosition bodyJoint[4];
-  XnPoint3D bodyPt[4];
-  for (int i = 0; i < 4; i++) {
-      
-    if (!g_UserGenerator.GetSkeletonCap().IsJointActive(bodyParts[i])) {
-      cout << "not Active" << endl;
-      return;
-    }
-    g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, bodyParts[i], bodyJoint[i]);
-    if (bodyJoint[i].fConfidence < 0.5) {
-      return;
-    }
-    bodyPt[i] = bodyJoint[i].position;
-    g_DepthGenerator.ConvertRealWorldToProjective(1, &bodyPt[i], &bodyPt[i]);
-  }
-
-  for (int i = 0; i < 4; i++) {
-    glPushMatrix();
-    {
-      glColor4d(0.0, 0.0, 1.0, 1.0);
-      glTranslated(bodyPt[i].X, bodyPt[i].Y, 0);
-      glRotated(180.0, 1.0, 0.0, 0.0); //ç¿ïWånÇ…çáÇÌÇπÇƒè„â∫ÇâÒì]Ç∑ÇÈ
-      glutSolidCube(20);
-    }
-    glPopMatrix();
-
-  }
-    
-  glPushMatrix();
-  {
-    glColor4d(1.0, 1.0, 0.0, 1.0);
-    int midX = 0, midY = 0;
-    for (int i = 0; i < 4; i++) {
-      midX += bodyPt[i].X;
-      midY += bodyPt[i].Y;
-    }
-    glTranslated(midX / 4, midY / 4, 0);
-    double height, width;
-    height = (bodyPt[0].Y + bodyPt[3].Y - bodyPt[1].Y - bodyPt[2].Y) / 2;
-    width = (bodyPt[0].X + bodyPt[1].X - bodyPt[2].X - bodyPt[3].X) / 2;
-    glScalef(1, height/width, 1);
-    glutSolidCube(width);
-  }
-  glPopMatrix();
-
+  
   //òr
   vector<vector<XnSkeletonJoint> > arm(4, vector<XnSkeletonJoint>());
   arm[0] = {XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_ELBOW, XN_SKEL_RIGHT_HAND};
@@ -670,8 +595,8 @@ void DrawPerson(XnUserID player)
 	  glTranslated(dist[j]/2, 0, 0);
 	  glPushMatrix();
 	  {
-	    glScalef(dist[j] / 10, 1, 1);
-	    glutSolidCube(10);
+	    glScalef(dist[j] / 30, 1, 1);
+	    glutSolidCube(30);
 	  }
 	  glPopMatrix();
 	  glTranslated(dist[j]/2, 0, 0);
@@ -683,6 +608,55 @@ void DrawPerson(XnUserID player)
     }
     glPopMatrix();
   }
+
+  // ì∑ëÃ
+  XnSkeletonJoint bodyParts[4] = {XN_SKEL_RIGHT_SHOULDER, XN_SKEL_RIGHT_HIP, XN_SKEL_LEFT_HIP, XN_SKEL_LEFT_SHOULDER};
+  XnSkeletonJointPosition bodyJoint[4];
+  XnPoint3D bodyPt[4];
+  for (int i = 0; i < 4; i++) {
+      
+    if (!g_UserGenerator.GetSkeletonCap().IsJointActive(bodyParts[i])) {
+      cout << "not Active" << endl;
+      return;
+    }
+    g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, bodyParts[i], bodyJoint[i]);
+    if (bodyJoint[i].fConfidence < 0.5) {
+      return;
+    }
+    bodyPt[i] = bodyJoint[i].position;
+    g_DepthGenerator.ConvertRealWorldToProjective(1, &bodyPt[i], &bodyPt[i]);
+  }
+
+  
+  glPushMatrix();
+  {
+    glColor4d(1.0, 1.0, 0.0, 1.0);
+    double minX = 100000000, minY = 100000000, maxX = -1, maxY = -1;
+    for (int i = 0; i < 4; i++) {
+      minX = min(minX, (double)bodyPt[i].X);
+      minY = min(minY, (double)bodyPt[i].Y);
+      maxX = max(maxX, (double)bodyPt[i].X);
+      maxY = max(maxY, (double)bodyPt[i].Y);
+    }
+    DrawRectangle(minX, minY, maxX, maxY);
+  }
+  glPopMatrix();
+
+
+  
+  // ì™
+  if (!g_UserGenerator.GetSkeletonCap().IsJointActive(XN_SKEL_HEAD)) {
+    return;
+  }
+  XnSkeletonJointPosition headJoint;
+  g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(player, XN_SKEL_HEAD, headJoint);
+  if (headJoint.fConfidence < 0.5) {
+    return;
+  }
+  XnPoint3D headPt;
+  headPt = headJoint.position;
+  g_DepthGenerator.ConvertRealWorldToProjective(1, &headPt, &headPt);
+  DrawFace(headPt.X, headPt.Y + 20, 50);
   
   
 }
