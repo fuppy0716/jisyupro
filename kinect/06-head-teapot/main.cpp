@@ -42,11 +42,13 @@ xn::Player g_Player;
 
 XnBool g_bNeedPose = FALSE;
 XnChar g_strPose[20] = "";
-XnBool g_bDrawBackground = TRUE;
+XnBool g_bDrawBackground = FALSE;
 XnBool g_bDrawPixels = TRUE;
 XnBool g_bDrawSkeleton = TRUE;
-XnBool g_bPrintID = TRUE;
-XnBool g_bPrintState = TRUE;
+XnBool g_bPrintID = FALSE;
+XnBool g_bPrintState = FALSE;
+XnBool g_bDrawTexture = TRUE;
+XnBool g_bDrawPerson = TRUE;
 
 XnBool g_bMarkJoints = FALSE;
 
@@ -54,6 +56,8 @@ XnBool g_bPause = false;
 XnBool g_bRecord = false;
 
 XnBool g_bQuit = false;
+
+int cnt = 0;
 
 
 void CleanupExit()
@@ -221,6 +225,9 @@ void glutKeyboard (unsigned char key, int /*x*/, int /*y*/)
         // Draw background?
         g_bDrawBackground = !g_bDrawBackground;
         break;
+    case 't':
+      g_bDrawTexture = !g_bDrawTexture;
+      break;
     case 'x':
         // Draw pixels at all?
         g_bDrawPixels = !g_bDrawPixels;
@@ -244,6 +251,9 @@ void glutKeyboard (unsigned char key, int /*x*/, int /*y*/)
     case'p':
         g_bPause = !g_bPause;
         break;
+    case 'q':
+      g_bDrawPerson = !g_bDrawPerson;
+      break;
     case 'S':
         SaveCalibration();
         break;
@@ -251,11 +261,12 @@ void glutKeyboard (unsigned char key, int /*x*/, int /*y*/)
         LoadCalibration();
         break;
     case 'a':
-      cout << "aaa" << endl;
       cv::Mat cvimg = cv::Mat::zeros(GL_WIN_SIZE_Y, GL_WIN_SIZE_X, CV_8UC3);
       glReadPixels(0, 0, GL_WIN_SIZE_X, GL_WIN_SIZE_Y, GL_BGR_EXT, GL_UNSIGNED_BYTE, cvimg.data);
       cv::flip(cvimg, cvimg, 0);
-      cv::imwrite("aaa.png", cvimg);
+      char name[50];
+      sprintf(name, "%04d.png", cnt++);
+      cv::imwrite(name, cvimg);
       break;
     }
 }

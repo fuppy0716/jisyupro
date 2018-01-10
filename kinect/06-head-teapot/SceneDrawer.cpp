@@ -27,7 +27,7 @@ extern XnBool g_bDrawSkeleton;
 extern XnBool g_bPrintID;
 extern XnBool g_bPrintState;
 extern XnBool g_bDrawTexture;
-
+extern XnBool g_bDrawPerson;
 extern XnBool g_bPrintFrameID;
 extern XnBool g_bMarkJoints;
 
@@ -406,7 +406,7 @@ void DrawDepthMap(const xn::DepthMetaData& dmd, const xn::SceneMetaData& smd, Ma
             glPrintString(GLUT_BITMAP_HELVETICA_18, strLabel);
         }
 	////////////////////////////////////
-	if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i])) {
+	if (g_UserGenerator.GetSkeletonCap().IsTracking(aUsers[i]) && g_bDrawPerson ) {
 	  DrawPerson(aUsers[i]);
 	}
 
@@ -581,7 +581,7 @@ void DrawPerson(XnUserID player)
       theta[j + 1] = atan2(armPt[j + 1].Y - armPt[j].Y, armPt[j + 1].X - armPt[j].X);
       theta[j + 1] *= (180 / M_PI);
       dist[j] = sqrt(pow(armPt[j + 1].Y - armPt[j].Y, 2) + pow(armPt[j + 1].X - armPt[j].X, 2));
-      dist[j] /= 2;
+      dist[j] /= 1.8;
     }
     
     glPushMatrix();
@@ -592,14 +592,14 @@ void DrawPerson(XnUserID player)
 	glPushMatrix();
 	{
 	  glRotated(theta[j + 1] - theta[j], 0, 0, 1);
-	  glTranslated(dist[j]/2, 0, 0);
+	  glTranslated(dist[j] * 1.8 / 4.0, 0, 0);
 	  glPushMatrix();
 	  {
-	    glScalef(dist[j] / 30, 1, 1);
-	    glutSolidCube(30);
+	    glScalef(dist[j] / 15, 1, 1);
+	    glutSolidCube(15);
 	  }
 	  glPopMatrix();
-	  glTranslated(dist[j]/2, 0, 0);
+	  glTranslated(dist[j] * 1.8 / 4.0, 0, 0);
 	}
       }
       for (int j = 0; j < 2; j++) {
